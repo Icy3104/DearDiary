@@ -22,7 +22,7 @@ const Addentryscreen: React.FC = () => {
 
   useFocusEffect(
     useCallback(() => {
-      // Clear form when screen comes into focus
+      
       setImageUri(null);
       setAddress('Fetching address...');
       setLocation(null);

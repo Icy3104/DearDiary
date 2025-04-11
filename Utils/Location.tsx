@@ -49,7 +49,7 @@ export const getAddressFromCoordinates = async (
   }
 };
 
-// A placeholder component to adhere to the React FC format (though it's not used).
+
 const LocationService: React.FC = () => {
   return null; 
 };

@@ -49,7 +49,7 @@ export const deleteEntry = async (id: string): Promise<void> => {
   }
 };
 
-// Function to clear all entries
+
 export const clearAllEntries = async (): Promise<void> => {
   try {
     await AsyncStorage.removeItem('travelEntries');

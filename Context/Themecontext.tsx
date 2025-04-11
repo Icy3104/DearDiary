@@ -19,7 +19,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [theme, setTheme] = useState<ThemeType>('light');
 
   useEffect(() => {
-    // Load theme from AsyncStorage on startup
+    
     const loadTheme = async () => {
       try {
         const savedTheme = await AsyncStorage.getItem('appTheme');
