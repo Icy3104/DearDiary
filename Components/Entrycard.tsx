@@ -1,17 +1,21 @@
 import React from 'react';
-import { View, Text, Image, StyleSheet } from 'react-native';
+import { View, Text, Image, StyleSheet, Button } from 'react-native';
 import { TravelEntry } from '../Utils/Storage';
 
 interface Props {
   entry: TravelEntry;
+  onRemove: (id: string) => void; // Callback to remove an entry
 }
 
-const Entrycard: React.FC<Props> = ({ entry }) => {
+const Entrycard: React.FC<Props> = ({ entry, onRemove }) => {
   return (
     <View style={styles.card}>
       <Image source={{ uri: entry.imageUri }} style={styles.image} />
       <Text style={styles.address}>{entry.address}</Text>
       <Text style={styles.date}>{new Date(entry.date).toLocaleString()}</Text>
+
+      {/* Remove button */}
+      <Button title="Remove" onPress={() => onRemove(entry.id)} />
     </View>
   );
 };

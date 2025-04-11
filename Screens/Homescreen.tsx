@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, FlatList, Button, StyleSheet, Text } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import { TravelEntry, getEntries } from '../Utils/Storage';
+import { TravelEntry, getEntries, deleteEntry } from '../Utils/Storage'; // ✅ Corrected here
 import Entrycard from '../Components/Entrycard';
 
 const Homescreen: React.FC = () => {
@@ -10,7 +10,7 @@ const Homescreen: React.FC = () => {
 
   const loadEntries = async () => {
     const storedEntries = await getEntries();
-    setEntries(storedEntries.reverse()); // Most recent first
+    setEntries(storedEntries.reverse());
   };
 
   useFocusEffect(
@@ -18,6 +18,11 @@ const Homescreen: React.FC = () => {
       loadEntries();
     }, [])
   );
+
+  const handleRemoveEntry = async (id: string) => {
+    await deleteEntry(id); // ✅ Updated to match Storage.tsx
+    loadEntries(); // Refresh after deletion
+  };
 
   return (
     <View style={styles.container}>
@@ -28,7 +33,9 @@ const Homescreen: React.FC = () => {
         <FlatList
           data={entries}
           keyExtractor={(item) => item.id}
-          renderItem={({ item }) => <Entrycard entry={item} />}
+          renderItem={({ item }) => (
+            <Entrycard entry={item} onRemove={handleRemoveEntry} />
+          )}
           contentContainerStyle={styles.list}
         />
       )}
