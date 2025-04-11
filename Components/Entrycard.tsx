@@ -1,20 +1,23 @@
 import React from 'react';
 import { View, Text, Image, StyleSheet, Button } from 'react-native';
 import { TravelEntry } from '../Utils/Storage';
+import { useThemeContext } from '../Context/ThemeContext';
 
 interface Props {
   entry: TravelEntry;
-  onRemove: (id: string) => void; // Callback to remove an entry
+  onRemove: (id: string) => void;
 }
 
 const Entrycard: React.FC<Props> = ({ entry, onRemove }) => {
-  return (
-    <View style={styles.card}>
-      <Image source={{ uri: entry.imageUri }} style={styles.image} />
-      <Text style={styles.address}>{entry.address}</Text>
-      <Text style={styles.date}>{new Date(entry.date).toLocaleString()}</Text>
+  const { theme } = useThemeContext();
 
-      {/* Remove button */}
+  return (
+    <View style={[styles.card, { backgroundColor: theme === 'dark' ? '#1c1c1c' : '#f0f0f0' }]}>
+      <Image source={{ uri: entry.imageUri }} style={styles.image} />
+      <Text style={[styles.address, { color: theme === 'dark' ? '#fff' : '#000' }]}>{entry.address}</Text>
+      <Text style={[styles.date, { color: theme === 'dark' ? '#ccc' : '#555' }]}>
+        {new Date(entry.date).toLocaleString()}
+      </Text>
       <Button title="Remove" onPress={() => onRemove(entry.id)} />
     </View>
   );
@@ -27,7 +30,6 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     borderRadius: 10,
     overflow: 'hidden',
-    backgroundColor: '#f0f0f0',
     elevation: 3,
   },
   image: {
@@ -41,7 +43,6 @@ const styles = StyleSheet.create({
   },
   date: {
     fontSize: 14,
-    color: '#555',
     paddingHorizontal: 8,
     paddingBottom: 8,
   },

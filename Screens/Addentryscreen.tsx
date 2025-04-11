@@ -1,16 +1,19 @@
 import React, { useState, useCallback } from 'react';
 import { View, Text, Button, Image, StyleSheet, Alert, TextInput } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { v4 as uuidv4 } from 'uuid'; 
+import { v4 as uuidv4 } from 'uuid';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 
 import { requestCameraPermission, requestLocationPermission, requestNotificationPermission } from '../Utils/Permissions';
 import { getCurrentLocation, getAddressFromCoordinates } from '../Utils/Location';
 import { saveEntry, TravelEntry } from '../Utils/Storage';
 import * as Notifications from 'expo-notifications';
+import { useThemeContext } from '../Context/ThemeContext';
+import Togglethemebutton from '../Components/Togglethemebutton';
 
 const Addentryscreen: React.FC = () => {
   const navigation = useNavigation();
+  const { theme } = useThemeContext();
 
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [address, setAddress] = useState<string>('Fetching address...');
@@ -19,12 +22,10 @@ const Addentryscreen: React.FC = () => {
 
   useFocusEffect(
     useCallback(() => {
-      return () => {
-        setImageUri(null);
-        setAddress('Fetching address...');
-        setLocation(null);
-        setCaption('');
-      };
+      setImageUri(null);
+      setAddress('Fetching address...');
+      setLocation(null);
+      setCaption('');
     }, [])
   );
 
@@ -96,18 +97,27 @@ const Addentryscreen: React.FC = () => {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme === 'dark' ? '#000' : '#fff' }]}>
+      <Togglethemebutton />
       <Button title="Take Photo" onPress={handleTakePhoto} />
 
       {imageUri && (
         <>
           <Image source={{ uri: imageUri }} style={styles.image} />
-          <Text style={styles.address}>{address}</Text>
+          <Text style={[styles.address, { color: theme === 'dark' ? '#ccc' : '#000' }]}>{address}</Text>
           <TextInput
             placeholder="Add a caption..."
+            placeholderTextColor={theme === 'dark' ? '#888' : '#888'}
             value={caption}
             onChangeText={setCaption}
-            style={styles.input}
+            style={[
+              styles.input,
+              {
+                color: theme === 'dark' ? '#fff' : '#000',
+                backgroundColor: theme === 'dark' ? '#222' : '#fff',
+                borderColor: theme === 'dark' ? '#555' : '#ccc',
+              },
+            ]}
           />
           <Button title="Save Entry" onPress={handleSave} />
         </>
@@ -123,7 +133,6 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 16,
     justifyContent: 'flex-start',
-    backgroundColor: '#fff',
   },
   image: {
     width: '100%',
@@ -137,7 +146,6 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderColor: '#ccc',
     padding: 8,
     borderRadius: 6,
     marginBottom: 16,
