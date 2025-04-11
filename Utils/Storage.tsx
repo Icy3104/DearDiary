@@ -10,7 +10,7 @@ export interface TravelEntry {
   caption: string;
 }
 
-// Function to save an entry
+
 export const saveEntry = async (entry: TravelEntry): Promise<void> => {
   try {
     const storedEntries = await AsyncStorage.getItem('travelEntries');
@@ -24,7 +24,7 @@ export const saveEntry = async (entry: TravelEntry): Promise<void> => {
   }
 };
 
-// Function to get all saved entries
+
 export const getEntries = async (): Promise<TravelEntry[]> => {
   try {
     const storedEntries = await AsyncStorage.getItem('travelEntries');
@@ -35,7 +35,7 @@ export const getEntries = async (): Promise<TravelEntry[]> => {
   }
 };
 
-// Function to delete an entry by ID
+
 export const deleteEntry = async (id: string): Promise<void> => {
   try {
     const storedEntries = await AsyncStorage.getItem('travelEntries');
