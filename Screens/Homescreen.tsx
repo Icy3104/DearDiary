@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { View, FlatList, Button, StyleSheet, Text } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { TravelEntry, getEntries, deleteEntry } from '../Utils/Storage';
 import Entrycard from '../Components/Entrycard';
-import { useThemeContext } from '../Context/ThemeContext';
+import { useThemeContext } from '../Context/Themecontext';
 import Togglethemebutton from '../Components/Togglethemebutton';
 
 const Homescreen: React.FC = () => {
@@ -12,8 +12,12 @@ const Homescreen: React.FC = () => {
   const { theme } = useThemeContext();
 
   const loadEntries = async () => {
-    const storedEntries = await getEntries();
-    setEntries(storedEntries.reverse());
+    try {
+      const storedEntries = await getEntries();
+      setEntries(storedEntries.reverse());
+    } catch (error) {
+      console.error('Error loading entries:', error);
+    }
   };
 
   useFocusEffect(
@@ -23,8 +27,12 @@ const Homescreen: React.FC = () => {
   );
 
   const handleRemoveEntry = async (id: string) => {
-    await deleteEntry(id);
-    loadEntries();
+    try {
+      await deleteEntry(id);
+      loadEntries();
+    } catch (error) {
+      console.error('Error removing entry:', error);
+    }
   };
 
   return (
@@ -33,7 +41,7 @@ const Homescreen: React.FC = () => {
       <Button title="Add New Entry" onPress={() => navigation.navigate('AddEntry' as never)} />
       {entries.length === 0 ? (
         <Text style={[styles.emptyText, { color: theme === 'dark' ? '#ccc' : '#888' }]}>
-          No entries yet. Start your travel diary!
+          No entries yet!
         </Text>
       ) : (
         <FlatList

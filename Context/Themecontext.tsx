@@ -21,18 +21,26 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => {
     // Load theme from AsyncStorage on startup
     const loadTheme = async () => {
-      const savedTheme = await AsyncStorage.getItem('appTheme');
-      if (savedTheme === 'dark' || savedTheme === 'light') {
-        setTheme(savedTheme);
+      try {
+        const savedTheme = await AsyncStorage.getItem('appTheme');
+        if (savedTheme === 'dark' || savedTheme === 'light') {
+          setTheme(savedTheme as ThemeType);
+        }
+      } catch (error) {
+        console.error('Failed to load theme', error);
       }
     };
     loadTheme();
   }, []);
 
   const toggleTheme = async () => {
-    const newTheme = theme === 'light' ? 'dark' : 'light';
-    setTheme(newTheme);
-    await AsyncStorage.setItem('appTheme', newTheme);
+    try {
+      const newTheme = theme === 'light' ? 'dark' : 'light';
+      setTheme(newTheme);
+      await AsyncStorage.setItem('appTheme', newTheme);
+    } catch (error) {
+      console.error('Failed to save theme', error);
+    }
   };
 
   return (
@@ -41,3 +49,5 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     </ThemeContext.Provider>
   );
 };
+
+export default ThemeContext;

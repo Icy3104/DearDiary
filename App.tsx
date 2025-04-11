@@ -3,7 +3,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 import { View, StyleSheet } from 'react-native';
 import Appnavigator from './Navigator/Appnavigator';
-import { ThemeProvider, useThemeContext } from './Context/ThemeContext';
+import { ThemeProvider, useThemeContext } from './Context/Themecontext';
 
 const ThemedApp = () => {
   const { theme } = useThemeContext();

@@ -8,7 +8,7 @@ import { requestCameraPermission, requestLocationPermission, requestNotification
 import { getCurrentLocation, getAddressFromCoordinates } from '../Utils/Location';
 import { saveEntry, TravelEntry } from '../Utils/Storage';
 import * as Notifications from 'expo-notifications';
-import { useThemeContext } from '../Context/ThemeContext';
+import { useThemeContext } from '../Context/Themecontext';
 import Togglethemebutton from '../Components/Togglethemebutton';
 
 const Addentryscreen: React.FC = () => {
@@ -22,6 +22,7 @@ const Addentryscreen: React.FC = () => {
 
   useFocusEffect(
     useCallback(() => {
+      // Clear form when screen comes into focus
       setImageUri(null);
       setAddress('Fetching address...');
       setLocation(null);
@@ -30,70 +31,80 @@ const Addentryscreen: React.FC = () => {
   );
 
   const handleTakePhoto = async () => {
-    const hasCameraPermission = await requestCameraPermission();
-    const hasLocationPermission = await requestLocationPermission();
+    try {
+      const hasCameraPermission = await requestCameraPermission();
+      const hasLocationPermission = await requestLocationPermission();
 
-    if (!hasCameraPermission || !hasLocationPermission) {
-      Alert.alert('Permissions required', 'Please enable camera and location permissions.');
-      return;
-    }
-
-    const result = await ImagePicker.launchCameraAsync({
-      allowsEditing: true,
-      quality: 0.7,
-    });
-
-    if (!result.canceled) {
-      const uri = result.assets[0].uri;
-      setImageUri(uri);
-
-      const loc = await getCurrentLocation();
-      if (loc) {
-        setLocation({
-          latitude: loc.coords.latitude,
-          longitude: loc.coords.longitude,
-        });
-
-        const addr = await getAddressFromCoordinates(loc.coords.latitude, loc.coords.longitude);
-        setAddress(addr);
-      } else {
-        setAddress('Unable to get location');
+      if (!hasCameraPermission || !hasLocationPermission) {
+        Alert.alert('Permissions required', 'Please enable camera and location permissions.');
+        return;
       }
+
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        quality: 0.7,
+      });
+
+      if (!result.canceled) {
+        const uri = result.assets[0].uri;
+        setImageUri(uri);
+
+        const loc = await getCurrentLocation();
+        if (loc) {
+          setLocation({
+            latitude: loc.coords.latitude,
+            longitude: loc.coords.longitude,
+          });
+
+          const addr = await getAddressFromCoordinates(loc.coords.latitude, loc.coords.longitude);
+          setAddress(addr);
+        } else {
+          setAddress('Unable to get location');
+        }
+      }
+    } catch (error) {
+      console.error('Error taking photo:', error);
+      Alert.alert('Error', 'Failed to take photo. Please try again.');
     }
   };
 
   const handleSave = async () => {
-    if (!imageUri || !location) {
-      Alert.alert('Missing data', 'Please take a photo first.');
-      return;
+    try {
+      if (!imageUri || !location) {
+        Alert.alert('Missing data', 'Please take a photo first.');
+        return;
+      }
+
+      const hasNotificationPermission = await requestNotificationPermission();
+      if (!hasNotificationPermission) {
+        Alert.alert('Permission required', 'Notification permission is required to proceed.');
+        return;
+      }
+
+      const newEntry: TravelEntry = {
+        id: uuidv4(),
+        imageUri,
+        address,
+        location,
+        date: new Date().toISOString(),
+        caption,
+      };
+
+      await saveEntry(newEntry);
+
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: 'Entry Saved!',
+          body: 'Your travel entry has been added successfully.',
+        },
+        trigger: null,
+      });
+
+      navigation.navigate('Home' as never);
+    } catch (error) {
+      console.error('Error saving entry:', error);
+      Alert.alert('Error', 'Failed to save entry. Please try again.');
     }
-
-    const hasNotificationPermission = await requestNotificationPermission();
-    if (!hasNotificationPermission) {
-      Alert.alert('Permission required', 'Notification permission is required to proceed.');
-      return;
-    }
-
-    const newEntry: TravelEntry = {
-      id: uuidv4(),
-      imageUri,
-      address,
-      location,
-      date: new Date().toISOString(),
-      caption,
-    };
-
-    await saveEntry(newEntry);
-
-    await Notifications.scheduleNotificationAsync({
-      content: {
-        title: 'Entry Saved!',
-        body: 'Your travel entry has been added successfully.',
-      },
-      trigger: null,
-    });
-
-    navigation.navigate('Homescreen');
   };
 
   return (

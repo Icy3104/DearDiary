@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button, View } from 'react-native';
-import { useThemeContext } from '../Context/ThemeContext';
+import { useThemeContext } from '../Context/Themecontext';
 
 const Togglethemebutton: React.FC = () => {
   const { theme, toggleTheme } = useThemeContext();
