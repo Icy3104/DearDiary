@@ -4,7 +4,7 @@ import * as Location from 'expo-location';
 export const getCurrentLocation = async (): Promise<Location.LocationObject | null> => {
   try {
     const { status } = await Location.requestForegroundPermissionsAsync();
-    
+
     if (status !== 'granted') {
       console.error('Location permission not granted');
       return null;
@@ -16,7 +16,7 @@ export const getCurrentLocation = async (): Promise<Location.LocationObject | nu
     
     return location;
   } catch (error) {
-    console.error('Error getting location', error);
+    console.error('Error getting location:', error);
     return null;
   }
 };
@@ -44,11 +44,12 @@ export const getAddressFromCoordinates = async (
     
     return 'Unknown location';
   } catch (error) {
-    console.error('Error getting address', error);
+    console.error('Error getting address:', error);
     return 'Address unavailable';
   }
 };
 
+// A placeholder component to adhere to the React FC format (though it's not used).
 const LocationService: React.FC = () => {
   return null; 
 };

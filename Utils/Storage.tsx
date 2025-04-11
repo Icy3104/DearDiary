@@ -1,57 +1,66 @@
-import React from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { v4 as uuidv4 } from 'uuid';
 
 export interface TravelEntry {
   id: string;
   imageUri: string;
   address: string;
-  location: {
-    latitude: number;
-    longitude: number;
-  };
+  location: { latitude: number; longitude: number };
   date: string;
+  caption: string;
 }
 
-const STORAGE_KEY = 'travel_entries';
-
+// Function to save an entry
 export const saveEntry = async (entry: TravelEntry): Promise<void> => {
   try {
-    const entriesJson = await AsyncStorage.getItem(STORAGE_KEY);
-    let entries: TravelEntry[] = entriesJson ? JSON.parse(entriesJson) : [];
-    
+    const storedEntries = await AsyncStorage.getItem('travelEntries');
+    const entries = storedEntries ? JSON.parse(storedEntries) : [];
+
     entries.push(entry);
-    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+
+    await AsyncStorage.setItem('travelEntries', JSON.stringify(entries));
   } catch (error) {
-    console.error('Error saving entry', error);
-    throw error;
+    console.error('Error saving entry:', error);
   }
 };
 
+// Function to get all saved entries
 export const getEntries = async (): Promise<TravelEntry[]> => {
   try {
-    const entriesJson = await AsyncStorage.getItem(STORAGE_KEY);
-    return entriesJson ? JSON.parse(entriesJson) : [];
+    const storedEntries = await AsyncStorage.getItem('travelEntries');
+    return storedEntries ? JSON.parse(storedEntries) : [];
   } catch (error) {
-    console.error('Error getting entries', error);
+    console.error('Error retrieving entries:', error);
     return [];
   }
 };
 
-export const removeEntry = async (id: string): Promise<void> => {
+// Function to delete an entry by ID
+export const deleteEntry = async (id: string): Promise<void> => {
   try {
-    const entriesJson = await AsyncStorage.getItem(STORAGE_KEY);
-    let entries: TravelEntry[] = entriesJson ? JSON.parse(entriesJson) : [];
-    
-    entries = entries.filter(entry => entry.id !== id);
-    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+    const storedEntries = await AsyncStorage.getItem('travelEntries');
+    const entries = storedEntries ? JSON.parse(storedEntries) : [];
+
+    const filteredEntries = entries.filter((entry: TravelEntry) => entry.id !== id);
+
+    await AsyncStorage.setItem('travelEntries', JSON.stringify(filteredEntries));
   } catch (error) {
-    console.error('Error removing entry', error);
-    throw error;
+    console.error('Error deleting entry:', error);
   }
 };
 
-const Storage: React.FC = () => {
-  return null; 
+// Function to clear all entries
+export const clearAllEntries = async (): Promise<void> => {
+  try {
+    await AsyncStorage.removeItem('travelEntries');
+  } catch (error) {
+    console.error('Error clearing entries:', error);
+  }
 };
 
-export default Storage;
+export default {
+  saveEntry,
+  getEntries,
+  deleteEntry,
+  clearAllEntries,
+};

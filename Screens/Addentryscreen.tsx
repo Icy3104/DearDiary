@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, Button, Image, StyleSheet, Alert } from 'react-native';
+import { View, Text, Button, Image, StyleSheet, Alert, TextInput } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { v4 as uuidv4 } from 'uuid'; 
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
@@ -15,6 +15,7 @@ const Addentryscreen: React.FC = () => {
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [address, setAddress] = useState<string>('Fetching address...');
   const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [caption, setCaption] = useState<string>('');
 
   useFocusEffect(
     useCallback(() => {
@@ -22,6 +23,7 @@ const Addentryscreen: React.FC = () => {
         setImageUri(null);
         setAddress('Fetching address...');
         setLocation(null);
+        setCaption('');
       };
     }, [])
   );
@@ -72,11 +74,12 @@ const Addentryscreen: React.FC = () => {
     }
 
     const newEntry: TravelEntry = {
-      id: uuidv4(), // 
+      id: uuidv4(),
       imageUri,
       address,
       location,
       date: new Date().toISOString(),
+      caption,
     };
 
     await saveEntry(newEntry);
@@ -89,17 +92,23 @@ const Addentryscreen: React.FC = () => {
       trigger: null,
     });
 
-    navigation.goBack();
+    navigation.navigate('Homescreen');
   };
 
   return (
     <View style={styles.container}>
       <Button title="Take Photo" onPress={handleTakePhoto} />
-      
+
       {imageUri && (
         <>
           <Image source={{ uri: imageUri }} style={styles.image} />
           <Text style={styles.address}>{address}</Text>
+          <TextInput
+            placeholder="Add a caption..."
+            value={caption}
+            onChangeText={setCaption}
+            style={styles.input}
+          />
           <Button title="Save Entry" onPress={handleSave} />
         </>
       )}
@@ -124,6 +133,13 @@ const styles = StyleSheet.create({
   },
   address: {
     fontSize: 16,
+    marginBottom: 16,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    padding: 8,
+    borderRadius: 6,
     marginBottom: 16,
   },
 });
