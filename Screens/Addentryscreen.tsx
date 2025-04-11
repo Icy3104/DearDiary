@@ -19,14 +19,15 @@ const Addentryscreen: React.FC = () => {
   const [address, setAddress] = useState<string>('Fetching address...');
   const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [caption, setCaption] = useState<string>('');
+  const [isSaving, setIsSaving] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
-      
       setImageUri(null);
       setAddress('Fetching address...');
       setLocation(null);
       setCaption('');
+      setIsSaving(false);
     }, [])
   );
 
@@ -68,19 +69,20 @@ const Addentryscreen: React.FC = () => {
     }
   };
 
+  // Simplified save method
   const handleSave = async () => {
+    if (isSaving) return;
+    
     try {
+      setIsSaving(true);
+      
       if (!imageUri || !location) {
         Alert.alert('Missing data', 'Please take a photo first.');
+        setIsSaving(false);
         return;
       }
-
-      const hasNotificationPermission = await requestNotificationPermission();
-      if (!hasNotificationPermission) {
-        Alert.alert('Permission required', 'Notification permission is required to proceed.');
-        return;
-      }
-
+      
+      console.log('Creating entry...');
       const newEntry: TravelEntry = {
         id: uuidv4(),
         imageUri,
@@ -89,21 +91,22 @@ const Addentryscreen: React.FC = () => {
         date: new Date().toISOString(),
         caption,
       };
-
+      
+      console.log('Saving entry...');
       await saveEntry(newEntry);
-
-      await Notifications.scheduleNotificationAsync({
-        content: {
-          title: 'Entry Saved!',
-          body: 'Your travel entry has been added successfully.',
-        },
-        trigger: null,
-      });
-
+      console.log('Entry saved successfully');
+      
+      // Skip notifications completely for now
+      console.log('Navigating to home screen...');
       navigation.navigate('Home' as never);
+      
     } catch (error) {
-      console.error('Error saving entry:', error);
-      Alert.alert('Error', 'Failed to save entry. Please try again.');
+      console.error('SAVE ERROR:', error);
+      Alert.alert(
+        'Save Failed', 
+        'Please check console logs for details and try again.'
+      );
+      setIsSaving(false);
     }
   };
 
@@ -130,7 +133,11 @@ const Addentryscreen: React.FC = () => {
               },
             ]}
           />
-          <Button title="Save Entry" onPress={handleSave} />
+          <Button 
+            title={isSaving ? "Saving..." : "Save Entry"} 
+            onPress={handleSave}
+            disabled={isSaving} 
+          />
         </>
       )}
     </View>

@@ -41,7 +41,7 @@ const Homescreen: React.FC = () => {
       <Button title="Add New Entry" onPress={() => navigation.navigate('AddEntry' as never)} />
       {entries.length === 0 ? (
         <Text style={[styles.emptyText, { color: theme === 'dark' ? '#ccc' : '#888' }]}>
-          No entries yet!
+          Put some memories will you!
         </Text>
       ) : (
         <FlatList
