@@ -1,171 +1,314 @@
-import React, { useState, useCallback } from 'react';
-import { View, Text, Button, Image, StyleSheet, Alert, TextInput } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Image, Alert, TextInput, ScrollView, ActivityIndicator } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { v4 as uuidv4 } from 'uuid';
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
-
-import { requestCameraPermission, requestLocationPermission, requestNotificationPermission } from '../Utils/Permissions';
-import { getCurrentLocation, getAddressFromCoordinates } from '../Utils/Location';
-import { saveEntry, TravelEntry } from '../Utils/Storage';
+import * as Location from 'expo-location';
 import * as Notifications from 'expo-notifications';
+import { useNavigation } from '@react-navigation/native';
+import { v4 as uuidv4 } from 'uuid';
 import { useThemeContext } from '../Context/Themecontext';
 import Togglethemebutton from '../Components/Togglethemebutton';
+import { saveEntry } from '../Utils/Storage';
+
+// Set up notifications
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
 
 const Addentryscreen: React.FC = () => {
   const navigation = useNavigation();
   const { theme } = useThemeContext();
 
   const [imageUri, setImageUri] = useState<string | null>(null);
-  const [address, setAddress] = useState<string>('Fetching address...');
-  const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [address, setAddress] = useState<string>('');
+  const [location, setLocation] = useState<{ latitude: number, longitude: number } | null>(null);
   const [caption, setCaption] = useState<string>('');
-  const [isSaving, setIsSaving] = useState(false);
+  const [loading, setLoading] = useState<boolean>(false);
 
-  useFocusEffect(
-    useCallback(() => {
-      setImageUri(null);
-      setAddress('Fetching address...');
-      setLocation(null);
-      setCaption('');
-      setIsSaving(false);
-    }, [])
-  );
+  // Request permissions when component mounts
+  useEffect(() => {
+    (async () => {
+      const { status: cameraStatus } = await ImagePicker.requestCameraPermissionsAsync();
+      if (cameraStatus !== 'granted') {
+        Alert.alert('Camera Permission Required', 'Enable camera access in settings.');
+      }
+
+      const { status: locationStatus } = await Location.requestForegroundPermissionsAsync();
+      if (locationStatus !== 'granted') {
+        Alert.alert('Location Permission Required', 'Enable location access in settings.');
+      }
+
+      const { status: notificationStatus } = await Notifications.requestPermissionsAsync();
+      if (notificationStatus !== 'granted') {
+        Alert.alert('Notification Permission Required', 'Enable notifications in settings.');
+      }
+    })();
+  }, []);
 
   const handleTakePhoto = async () => {
     try {
-      const hasCameraPermission = await requestCameraPermission();
-      const hasLocationPermission = await requestLocationPermission();
+      setLoading(true);
 
-      if (!hasCameraPermission || !hasLocationPermission) {
-        Alert.alert('Permissions required', 'Please enable camera and location permissions.');
+      // Check camera permission again before launch
+      const { status } = await ImagePicker.getCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Camera Access Denied', 'Please allow camera access in settings.');
+        setLoading(false);
         return;
       }
 
-      const result = await ImagePicker.launchCameraAsync({
+      const cameraResult = await ImagePicker.launchCameraAsync({
         allowsEditing: true,
         quality: 0.7,
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
       });
 
-      if (!result.canceled) {
-        const uri = result.assets[0].uri;
-        setImageUri(uri);
+      console.log('Camera Result:', cameraResult);
 
-        const loc = await getCurrentLocation();
-        if (loc) {
-          setLocation({
-            latitude: loc.coords.latitude,
-            longitude: loc.coords.longitude,
-          });
+      if (cameraResult.canceled || !cameraResult.assets || cameraResult.assets.length === 0) {
+        setLoading(false);
+        Alert.alert('Error', 'No image was captured. Please try again.');
+        return;
+      }
 
-          const addr = await getAddressFromCoordinates(loc.coords.latitude, loc.coords.longitude);
-          setAddress(addr);
+      const capturedImageUri = cameraResult.assets[0].uri;
+      setImageUri(capturedImageUri);
+
+      const currentLocation = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Highest,
+        maximumAge: 10000,
+      });
+
+      const { latitude, longitude } = currentLocation.coords;
+      setLocation({ latitude, longitude });
+
+      try {
+        const addressResponse = await Location.reverseGeocodeAsync({ latitude, longitude });
+
+        if (addressResponse && addressResponse.length > 0) {
+          const addr = addressResponse[0];
+          const formatted = [
+            addr.name, addr.street, addr.district, addr.city, addr.region, addr.country,
+          ].filter(Boolean).join(', ');
+
+          setAddress(formatted || `Location: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}`);
         } else {
-          setAddress('Unable to get location');
+          setAddress(`Location: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}`);
         }
+      } catch (geocodeError) {
+        console.error('Geocoding error:', geocodeError);
+        setAddress(`Location: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}`);
       }
     } catch (error) {
-      console.error('Error taking photo:', error);
-      Alert.alert('Error', 'Failed to take photo. Please try again.');
+      console.error('Camera/location error:', error);
+      Alert.alert('Error', 'Failed to capture photo or fetch location. Try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Simplified save method
-  const handleSave = async () => {
-    if (isSaving) return;
-    
+  const sendNotification = async () => {
     try {
-      setIsSaving(true);
-      
-      if (!imageUri || !location) {
-        Alert.alert('Missing data', 'Please take a photo first.');
-        setIsSaving(false);
-        return;
-      }
-      
-      console.log('Creating entry...');
-      const newEntry: TravelEntry = {
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: 'Travel Entry Saved!',
+          body: `Your travel memory at ${address} has been saved.`,
+          data: { screen: 'Home' },
+        },
+        trigger: null,
+      });
+    } catch (error) {
+      console.error('Notification error:', error);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!imageUri) {
+      Alert.alert('Missing Photo', 'Please take a photo first');
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      const newEntry = {
         id: uuidv4(),
         imageUri,
         address,
-        location,
+        location: location || { latitude: 0, longitude: 0 },
         date: new Date().toISOString(),
         caption,
       };
-      
-      console.log('Saving entry...');
+
       await saveEntry(newEntry);
-      console.log('Entry saved successfully');
-      
-      // Skip notifications completely for now
-      console.log('Navigating to home screen...');
-      navigation.navigate('Home' as never);
-      
+      await sendNotification();
+      navigation.navigate('Home');
     } catch (error) {
-      console.error('SAVE ERROR:', error);
-      Alert.alert(
-        'Save Failed', 
-        'Please check console logs for details and try again.'
-      );
-      setIsSaving(false);
+      console.error('Save error:', error);
+      Alert.alert('Error', 'Failed to save entry. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: theme === 'dark' ? '#000' : '#fff' }]}>
+    <ScrollView
+      style={[styles.container, { backgroundColor: theme === 'dark' ? '#121212' : '#f5f5f5' }]}
+      contentContainerStyle={styles.contentContainer}
+    >
       <Togglethemebutton />
-      <Button title="Take Photo" onPress={handleTakePhoto} />
+
+      <View style={styles.photoButtonContainer}>
+        <TouchableOpacity
+          style={[
+            styles.photoButton,
+            { backgroundColor: theme === 'dark' ? '#333' : '#2196F3' },
+          ]}
+          onPress={handleTakePhoto}
+          disabled={loading}
+        >
+          <Text style={styles.photoButtonText}>Take Photo</Text>
+        </TouchableOpacity>
+      </View>
+
+      {loading && (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={theme === 'dark' ? '#fff' : '#000'} />
+          <Text style={{ color: theme === 'dark' ? '#fff' : '#000', marginTop: 10 }}>
+            Processing...
+          </Text>
+        </View>
+      )}
 
       {imageUri && (
-        <>
+        <View style={styles.resultContainer}>
           <Image source={{ uri: imageUri }} style={styles.image} />
-          <Text style={[styles.address, { color: theme === 'dark' ? '#ccc' : '#000' }]}>{address}</Text>
-          <TextInput
-            placeholder="Add a caption..."
-            placeholderTextColor={theme === 'dark' ? '#888' : '#888'}
-            value={caption}
-            onChangeText={setCaption}
-            style={[
-              styles.input,
-              {
-                color: theme === 'dark' ? '#fff' : '#000',
-                backgroundColor: theme === 'dark' ? '#222' : '#fff',
-                borderColor: theme === 'dark' ? '#555' : '#ccc',
-              },
-            ]}
-          />
-          <Button 
-            title={isSaving ? "Saving..." : "Save Entry"} 
-            onPress={handleSave}
-            disabled={isSaving} 
-          />
-        </>
+
+          <View style={styles.infoContainer}>
+            <Text style={[styles.label, { color: theme === 'dark' ? '#fff' : '#000' }]}>
+              Location:
+            </Text>
+            <Text style={[styles.addressText, { color: theme === 'dark' ? '#ddd' : '#333' }]}>
+              {address || 'Unknown location'}
+            </Text>
+
+            {location && (
+              <Text style={[styles.coordinatesText, { color: theme === 'dark' ? '#bbb' : '#666' }]}>
+                Lat: {location.latitude.toFixed(6)}, Long: {location.longitude.toFixed(6)}
+              </Text>
+            )}
+
+            <Text style={[styles.label, { color: theme === 'dark' ? '#fff' : '#000', marginTop: 16 }]}>
+              Caption:
+            </Text>
+            <TextInput
+              style={[
+                styles.captionInput,
+                {
+                  backgroundColor: theme === 'dark' ? '#333' : '#fff',
+                  color: theme === 'dark' ? '#fff' : '#000',
+                }
+              ]}
+              placeholder="Add a caption..."
+              placeholderTextColor={theme === 'dark' ? '#aaa' : '#999'}
+              value={caption}
+              onChangeText={setCaption}
+              multiline
+            />
+
+            <TouchableOpacity
+              style={[
+                styles.saveButton,
+                { backgroundColor: theme === 'dark' ? '#4caf50' : '#4caf50' }
+              ]}
+              onPress={handleSave}
+              disabled={loading}
+            >
+              <Text style={styles.saveButtonText}>Save Entry</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       )}
-    </View>
+    </ScrollView>
   );
 };
-
-export default Addentryscreen;
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  contentContainer: {
     padding: 16,
-    justifyContent: 'flex-start',
+    paddingBottom: 32,
+  },
+  photoButtonContainer: {
+    alignItems: 'center',
+    marginVertical: 20,
+  },
+  photoButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    elevation: 3,
+  },
+  photoButtonText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  loadingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginVertical: 20,
+  },
+  resultContainer: {
+    marginTop: 16,
   },
   image: {
     width: '100%',
-    height: 250,
-    marginVertical: 16,
-    borderRadius: 10,
+    height: 300,
+    borderRadius: 8,
   },
-  address: {
+  infoContainer: {
+    marginTop: 16,
+  },
+  label: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
+  addressText: {
     fontSize: 16,
+    marginBottom: 4,
+  },
+  coordinatesText: {
+    fontSize: 14,
+  },
+  captionInput: {
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    minHeight: 100,
+    textAlignVertical: 'top',
+    marginTop: 8,
     marginBottom: 16,
   },
-  input: {
-    borderWidth: 1,
-    padding: 8,
-    borderRadius: 6,
-    marginBottom: 16,
+  saveButton: {
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    elevation: 3,
+    marginTop: 8,
+  },
+  saveButtonText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
   },
 });
+
+export default Addentryscreen;
